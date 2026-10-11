@@ -1,0 +1,15 @@
+--- FileSets/PatchSource/PageSettings.qml.orig
++++ FileSets/PatchSource/PageSettings.qml
+@@ -149,6 +149,12 @@
+ 			show: hasRelay0
+ 		}
+ 
++		////// added for RelayScheduler package
++		MbSubMenu {
++			description: qsTr("RelayScheduler")
++			subpage: Component { PageSettingsRelayScheduler {} }
++		}
++
+ 		MbSubMenu {
+ 			description: qsTr("Tank pump")
+ 			subpage: Component { PageSettingsTankPump {} }

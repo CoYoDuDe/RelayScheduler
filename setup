@@ -1,0 +1,48 @@
+#!/bin/bash
+standardPromptAndActions='no'
+if /data/SetupHelper/patch -v >/dev/null 2>&1; then
+    patch='/data/SetupHelper/patch --force --silent --reject-file=/dev/null'
+elif /data/SetupHelper/patchBookworm -v >/dev/null 2>&1; then
+    patch='/data/SetupHelper/patchBookworm --force --silent --reject-file=/dev/null'
+else
+    echo 'SetupHelper-Patchprogramm fehlt.' >&2
+    exit 245
+fi
+source '/data/SetupHelper/HelperResources/IncludeHelpers'
+# Preserve the helper's original "file did not exist" record on changed updates.
+# Otherwise an addon-only page becomes .orig and survives uninstall.
+eval "$(declare -f backupActiveFile | sed '1s/backupActiveFile/relaySchedulerOriginalBackupActiveFile/')"
+backupActiveFile () {
+    case "$1" in
+        /opt/victronenergy/gui/qml/PageSettingsRelayScheduler.qml|/opt/victronenergy/gui/qml/PageSettingsRelaySchedulerPlan.qml|/opt/victronenergy/gui/qml/PageSettingsRelaySchedulerSwitch.qml)
+            if [ -f "$1.NO_ORIG" ] && ! [ -e "$1.orig" ]; then
+                return 1
+            fi
+            ;;
+    esac
+    relaySchedulerOriginalBackupActiveFile "$@"
+}
+if [ "$scriptAction" = 'NONE' ]; then
+    standardActionPrompt
+fi
+if [ "$scriptAction" = 'INSTALL' ]; then
+    if [ "$packageName" != 'RelayScheduler' ]; then
+        logMessage 'Paket bitte als RelayScheduler installieren'
+        exit 245
+    fi
+    if ! python3 -c 'import dbus, gi, ctypes; ctypes.CDLL("libgpiod.so.3")'; then
+        logMessage 'Venus Python-D-Bus/GLib oder libgpiod 2 fehlt; Installation abgebrochen'
+        exit 245
+    fi
+fi
+if [ "$scriptAction" = 'INSTALL' ] || [ "$scriptAction" = 'UNINSTALL' ]; then
+    if [ -d /service/com.coyodude.RelayScheduler ]; then
+        svc -d /service/com.coyodude.RelayScheduler
+        if ! python3 "$scriptDir/src/lifecycle.py"; then
+            logMessage 'RelayScheduler oder Laufzeitwache noch aktiv; Dateien bleiben erhalten'
+            svc -u /service/com.coyodude.RelayScheduler
+            exit 245
+        fi
+    fi
+fi
+endScript 'INSTALL_FILES' 'INSTALL_SERVICES' 'ADD_DBUS_SETTINGS'

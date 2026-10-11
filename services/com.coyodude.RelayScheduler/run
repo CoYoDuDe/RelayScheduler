@@ -1,0 +1,11 @@
+#!/bin/sh
+exec 2>&1
+. /etc/profile.d/profile.sh
+export PYTHONUNBUFFERED=1
+for candidate in /opt/victronenergy/dbus-systemcalc-py/ext/velib_python /data/SetupHelper/velib_python /data/SetupHelper/velib_python/latest; do
+    if [ -d "$candidate" ]; then
+        export PYTHONPATH="$candidate${PYTHONPATH:+:$PYTHONPATH}"
+        break
+    fi
+done
+exec python3 /data/RelayScheduler/src/daemon.py
